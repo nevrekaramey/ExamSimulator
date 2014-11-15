@@ -1,0 +1,8 @@
+<apex:page controller="MasterExaminationController" tabStyle="Examination__c">
+<apex:sectionHeader title="Examination" subtitle="{! $User.FirstName} - {!ExamName}"/>
+<apex:pageBlock mode="edit">
+    <apex:pageBlockSection > 
+        <apex:outputText >You have scored {!ExamPoints} out of a possible {!QuestionCount} point. You have {!ExamResult} the examination.</apex:outputText>
+    </apex:pageBlockSection>  
+</apex:pageBlock>
+</apex:page>

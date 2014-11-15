@@ -1,0 +1,41 @@
+public class answerProcessing{
+    
+    public void submitAnswer(Set<ID> qId,Set<ID> aId, String[] answers,Boolean checkReview){
+        
+        reviewChecked(qId, checkReview);
+        
+        List<Answer__c> updateAnswers = new List<Answer__c>();
+        List<Answer__c> aList = [Select Answer__c, Selected__c,Question__c from Answer__c where Question__c IN: qId and Id IN :aId];
+        
+        
+        List<Question__c> qList = [Select Mark_For_Review__c from Question__c where Id IN: qId];
+        
+        for(String a : answers){
+            for(Answer__c ans : aList){
+                    if(ans.Answer__c == a){
+                        ans.Selected__c = true;
+                        updateAnswers.add(ans);
+                    }
+            }  
+        }
+        
+        if(!updateAnswers.isEmpty()){
+            update updateAnswers;
+        }
+    }
+    //Checking a question for review
+    private void reviewChecked(Set<ID> qId,Boolean checkReview){
+    
+        List<Question__c> updateQuestionReview = new List<Question__c>();
+        List<Question__c> qList = [Select Mark_For_Review__c from Question__c where Id IN: qId];
+        
+        for(Question__c q : qList){
+            q.Mark_For_Review__c = checkReview;
+            updateQuestionReview.add(q);
+        }
+        
+        if(!updateQuestionReview.isEmpty()){
+            update updateQuestionReview;
+        }
+    }
+}

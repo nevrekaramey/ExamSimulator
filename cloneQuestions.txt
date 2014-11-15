@@ -1,0 +1,127 @@
+trigger cloneQuestions on Examination__c (before insert, after insert ) {
+
+    if(Trigger.isBefore){
+        Examination__C Ex = Trigger.New[0];
+    
+    Test_form__c tF = [select Account__c from Test_Form__c where id =:ex.Test_Form__c];
+    if(tF.Account__c == null)    
+     {
+      Trigger.New[0].addError('Please Add the Account to the Test Form');
+     }
+    User U =  [select name,Account_id__C from User where id=: ex.Examination_Taker__c];
+     if(u.Account_Id__c == null)    
+     {
+        Trigger.New[0].addError('Please select the Account record for  Account to the Test Form');
+     }      
+    
+    if(tf.Account__c != u.Account_id__c)
+     {
+        Trigger.New[0].addError('This test Form is not related to User Account');
+     }   
+}
+    
+    if(Trigger.isAfter){        
+
+    
+    Set<ID> tfID = new Set<ID>(); //Test form Id's
+    Set<ID> eId = new Set<ID>(); //Exam Id's
+    Set<ID> eTakerId = new Set<ID>(); //Exam Taker Id(s)
+    Set<ID> qId = new Set<id>(); // Question Ids
+    
+    Map<id,Id> linkQids = new Map<id,id>(); //Map of Old and cloned(new) question Ids
+        
+    List<Examination__c> eNameUpdate = new List<Examination__c>(); //List of Exam name to be updated with user name
+    List<Question__c> eQList = new List<Question__c>(); //List of questions related to the exam
+    List<Answer__c> eAList = new List<Answer__c>(); //List of Answers related to Questions in the Test form
+    
+    //Trigger to get the current exam id and associated Test form
+    for(Examination__c tId : Trigger.new){
+        eId.add(tId.Id);
+        tfID.add(tId.Test_Form__c);
+    }
+        
+    //List of Exam Name(s)
+    List<Examination__c> eName= [Select Name, Examination_Taker__c from Examination__c where Id IN : eId];
+        
+    //Fetching Exam Taker Id of the current exam been taken
+    for(Examination__c ex : eName){
+        eTakerId.add(ex.Examination_Taker__c);
+    }
+        
+    //Querying for the Username taking the exam
+    List<User> eTaker = [Select Name from User where Id IN :eTakerId];
+        
+    //Appending Exam name with user name
+    for(Examination__c ex : eName){
+        for(User u : eTaker){
+            ex.Name = u.Name + ' - ' + ex.Name;
+            eNameUpdate.add(ex);
+        }
+    }
+    
+    //Updating the Exam name
+    if(!eNameUpdate.isEmpty()){
+        update eNameUpdate;
+    }     
+    
+    Examination__c exContainer = Trigger.New[0];
+    
+    //List of Question need to be cloned
+    List<Question__c> qList = [select Id,Name,Correct__c,Examination__c,Question__c,Question_Number__c from Question__c where Test_Form__c IN:tfID];
+    
+    //Cloning the Question to be put in the exam from Test form
+    eQList = qList.deepClone();
+    
+    //Updating the Examination ID on the question
+    for(Question__c q: eQList)
+    {
+        q.Examination__C = exContainer.ID;            
+    }
+    
+    //Inserting the cloned question in Exam
+    if(eQList.size() > 0 ){
+        insert eQList;
+    }
+    
+    //Getting the Question Id of old questions
+    for(Question__c qx: qList){
+        qId.add(qx.id);
+    } 
+    
+    //Putting the old and new question Ids in the map          
+    for(Integer i=0;i<qList.size();i++)
+    {
+        linkQids.put(qList[i].id,eQList[i].id);
+    }
+    
+    //Fetching all the answers in related to the question in Test form     
+    List<Answer__c> aList = [select Name,Answer__c,Answer_is_Correct__c,Correct__c,Number__c,Question__c from Answer__c where Question__c in : qId];
+    
+    //Cloning the Answers to be put in the exam from Test form
+    eAList = aList.deepclone();
+    
+    //Associating the cloned Question(s) with cloned Answer(s)     
+    for(Answer__c a:eAList)
+    {
+        a.Question__C = linkQids.get(a.Question__C);
+    }
+    
+    //Sharing Exam record
+    Examination__Share ES = New Examination__Share(AccessLevel='EDIT',ParentID=Trigger.New[0].id,UserOrGroupId=exContainer.Examination_Taker__c);
+         insert ES;
+         List<Question__Share> QS = new List<Question__Share>();
+         for(Question__c q:qList)
+          {
+             Question__Share qs1 = new Question__Share(AccessLevel='Edit',ParentID=q.ID,UserOrGroupID=exContainer.Examination_Taker__c);
+             QS.add(qs1);
+          }
+          
+          if(QS.size() > 0)
+            insert QS;
+    
+    //Inserting the Cloned Answer(s) in relationship to the cloned Questions
+    if(!eAList.isEmpty()){
+        insert eAList;    
+    }       
+   }                  
+}

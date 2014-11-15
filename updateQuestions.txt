@@ -1,0 +1,61 @@
+trigger updateQuestions on Examination__c (after insert ) {
+    
+     Set<ID> tfID = new Set<ID>();
+     Set<ID> eId = new Set<ID>();
+    
+    for(Examination__c tId : Trigger.new){
+        eId.add(tId.Id);
+        tfID.add(tId.Test_Form__c);
+    }
+    
+    Set<ID> eTakerId = new Set<ID>();
+    List<Examination__c> eName= [Select Name, Examination_Taker__c from Examination__c where Id IN : eId];
+    
+    for(Examination__c ex : eName){
+        eTakerId.add(ex.Examination_Taker__c);
+    }
+    
+    List<User> eTaker = [Select Name from User where Id IN :eTakerId];
+    List<Examination__c> eNameUpdate = new List<Examination__c>();
+    
+    for(Examination__c ex : eName){
+        for(User u : eTaker){
+            ex.Name = u.Name + ' - ' + ex.Name;
+            eNameUpdate.add(ex);
+        }
+    }
+    
+    if(!eNameUpdate.isEmpty()){
+        update eNameUpdate;
+    }
+    
+    
+    List<Question__c> qList = [Select Question__c,Examination__c,Test_Form__c from Question__c where Test_Form__c IN : tfID Limit 3];
+    List<Question__c> eQList = new List<Question__c>();
+    
+    Integer count = [Select count() from Question__c where Test_Form__c IN : tfID];
+    
+    Set<ID> qId = new Set<ID>();
+    
+    for(Question__c q : qList){
+        if(q.Examination__c == null){
+            q.Test_Form__c = null;
+            
+            for(Id exId : eId)
+                q.Examination__c = exId;
+                
+            eQList.add(q);
+        }
+        qId.add(q.Id);
+    }
+    
+    List<Answer__c> aList = [Select Answer__c,Id from Answer__c where Question__c IN : qID];
+    
+    
+    System.debug('Question List :' + count);
+    System.debug('Answer List :' + aList);
+    
+    if(!eQList.isEmpty()){
+        update eQList;
+    }
+}

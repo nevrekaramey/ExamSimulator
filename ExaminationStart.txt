@@ -1,0 +1,8 @@
+<apex:page controller="MasterExaminationController" tabStyle="Examination__c">
+<apex:sectionHeader title="Examination" subtitle="{! $User.FirstName} - {!ExamName}"/>
+<apex:form >
+<apex:pageBlock >
+Your examination is ready to start. Press start exam to begin.<center><apex:commandButton action="{!start}" value="Start"/></center>
+</apex:pageBlock>
+</apex:form>
+</apex:page>

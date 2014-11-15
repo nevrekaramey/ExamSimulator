@@ -1,0 +1,20 @@
+<apex:page StandardController="Examination__c" extensions="examinationExtension" recordSetVar="exams" tabStyle="Examination__c">
+
+<apex:sectionHeader title="Examination" subtitle="Home"/>
+<apex:form >
+<apex:pageBlock >
+    <apex:pageBlockTable value="{!exams}" var="exam">
+            
+            <apex:column headerValue="Examination Name">
+                <apex:commandLink action="{!StartPage}" value="{!exam.name}">
+                    <apex:param name="passName" value="{!exam.Name}" assignTo="{!passName}"/>    
+                </apex:commandLink>
+            </apex:column>
+
+        <apex:column value="{!exam.Examination_Status__c}"/>
+     
+    </apex:pageBlockTable>
+</apex:pageBlock>
+</apex:form>
+    
+</apex:page>

@@ -1,0 +1,54 @@
+public class examinationExtension{
+    
+    private final Examination__c examObj;
+    public String passName {get;set;}
+    String eId;
+    
+    public examinationExtension(ApexPages.StandardSetController stdController){
+        this.examObj = (Examination__c)stdController.getRecord();
+        System.debug('Value:'+ examObj);
+    }
+    
+    public PageReference StartPage(){
+        PageReference ePage;
+        
+        String eStatus = examStatusValue(passName);
+        eId = examId(passName);
+        
+        if(eStatus == 'In Progress'){
+            ePage = Page.ExamContainer;
+        }
+        else if(eStatus == 'New'){
+            ePage = Page.ExaminationStart;
+        }
+        else {
+            ePage = Page.FinishExam;
+        }
+        ePage.getParameters().put('examName',passName);
+        ePage.getParameters().put('examId',eId);
+        return ePage;
+    }
+    
+    public String examStatusValue(String examName){
+        String status;
+        
+        List<Examination__c> examStatus = [Select Examination_Status__c from Examination__c where name=: examName];
+        
+        for(Examination__c eStatus : examStatus){
+                status = eStatus.Examination_Status__c;
+        }
+        
+        return status;
+    }
+    
+    public String examId(String examName){
+        
+        List<Examination__c> examinationId = [Select Id from Examination__c where name=: examName];
+        
+        for(Examination__c exId : examinationId){
+                eId = exId.Id;
+        }
+        
+        return eId;
+    }
+}

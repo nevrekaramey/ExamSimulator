@@ -1,0 +1,277 @@
+public class MasterExaminationController{
+
+   private integer counter=0;  //tracking offset
+   private integer list_size=1; //number of questions
+   public integer total_size; //total number of questions to be answered.
+   public String examName; //Exam Name to display to the user
+   public String eId; // Exam Id to filter questions specfic to exam been taken
+   public Set<ID> qId = new Set<ID>(); //Current question IDs
+   public Set<Id> aId = new Set<Id>(); //Current answer IDs
+   public String[] answers = new String[]{};//Answers specific to the question
+   Boolean reviewCheck;
+   
+   answerProcessing ap = new answerProcessing(); //Instatiating answer processing class
+ 
+     //Controller setting the total number of questions and exam to be taken
+   public MasterExaminationController() {
+       examName = System.currentPagereference().getParameters().get('examName');
+       eId = System.currentPagereference().getParameters().get('examId');
+       total_size = [select count() from Question__c where Examination__c =:eId ]; //set the total size in the constructor
+   }
+    
+   //Returing Exam Name to be displayed in the UI
+    public String getExamName(){
+        return examName;
+    }
+    
+    //Returning questions to be displayed for specific exam been taken
+    public Question__c[] getQuestions() {
+        try 
+        {
+            Question__c[] questions = [Select Id, Question__c, Examination__c from Question__c where Examination__c =:eId limit :list_size offset :counter];
+            
+            List<Question__c> qx = [Select Id, Question__c, Examination__c from Question__c where Examination__c =:eId limit :list_size offset :counter];
+            for(Question__c q: qx){
+                qId.add(q.Id);
+            }
+            
+            return questions;
+        } 
+        
+        catch (QueryException e) 
+        {
+            ApexPages.addMessages(e);   
+            return null;
+        }
+    }
+    
+    public List<Question__c> getQuestionList(){
+        try 
+        {
+            Question__c[] questions = [Select Name from Question__c where Examination__c =:eId];
+            return questions;
+        } 
+        
+        catch (QueryException e) 
+        {
+            ApexPages.addMessages(e);   
+            return null;
+        }
+    }
+    
+    public String getmarkSymbolReview(){
+        String symbol;
+        List<Question__c> qMarkList = [Select Mark_For_Review__c from Question__c where Id IN: qId];
+        
+        System.debug('----'+qMarkList);
+        for(Question__c q : qMarkList){
+            if(q.Mark_For_Review__c == true){
+                symbol = '*';
+            }
+        }
+        
+        return symbol;
+    }
+    
+    public List<SelectOption> getAnswerList() {
+    
+        List<SelectOption> options = new List<SelectOption>();
+        //Set of unique question Ids
+         Set<ID> qId = new Set<ID>();
+            
+            //List of Question Id specific to exam
+            List<Question__c> qList = [Select Id from Question__c where Examination__c =:eId limit :list_size offset :counter];
+            
+            //Adding Question Id to the set
+            for(Question__c q : qList){
+                qId.add(q.Id);
+            }
+         //Retreving all the answer specific to the question
+            Answer__c[] answers = [Select Id, Answer__c,selected__c, Number__c from Answer__c where Question__c IN:qId];
+        
+        for(Answer__c ans : answers){
+            options.add(new SelectOption(ans.Answer__c, ans.Answer__c));
+            aId.add(ans.Id);            
+        }
+        
+        return options;
+    }
+    
+    public String[] getAnswers() {
+        return answers;
+    }
+    
+    public void setAnswers(String[] answers) {
+        this.answers = answers;
+    }
+    
+    public Boolean getreviewCheck(){
+        return false;
+    }
+    
+    public void setreviewCheck(Boolean reviewCheck){
+        this.reviewCheck = reviewCheck;
+    }
+    
+    //Going to previous questions or answers in the list
+    public PageReference Previous() {
+        counter -= list_size;
+        return null;
+    }
+    
+    Decimal aToSelect;
+    //Number of answers to select
+    public Decimal getAnswerToSelect(){
+        
+        aToSelect= [SELECT Number_of_Correct_Answers__c FROM Question__c where Id=:qId and Examination__c=:eId limit :list_size offset :counter].Number_of_Correct_Answers__c;
+        
+        return aToSelect;
+    }
+    
+    //Going to next questions or answers
+    public PageReference Next() {
+    
+        if(answers.size() == aToSelect.intValue()){
+            System.debug('Values : ' + qId +''+ aId +''+ answers +''+ reviewCheck );
+            ap.submitAnswer(qId, aId, answers, reviewCheck);
+            counter += list_size;
+            
+        }
+        else{
+            ApexPages.addmessage(new ApexPages.message(ApexPages.severity.Error, 'Please select '+ aToSelect + ' answer(s)')); 
+        }
+        return null;
+    }
+   
+       public PageReference Review() {
+       
+           if(answers.size() == aToSelect.intValue()){
+           
+               System.debug('Values : ' + qId +''+ aId +''+ answers +''+ reviewCheck );
+               ap.submitAnswer(qId, aId, answers, reviewCheck);
+                return Page.ExamReview;
+            }
+            else{
+                ApexPages.addmessage(new ApexPages.message(ApexPages.severity.Error, 'Please select '+ aToSelect + ' answer(s)')); 
+                return null;
+            }
+       }
+       
+       public PageReference ReviewQuestion() {
+           
+           PageReference rQ;
+           rQ = Page.ExamContainer;
+           rQ.getParameters().put('examId',eId);
+           return rQ;
+       }
+       
+       public PageReference Finish() {
+           if(answers.size() == aToSelect.intValue()){
+                updateExamStatus();
+                return Page.FinishExam;
+            }
+            else{
+                ApexPages.addmessage(new ApexPages.message(ApexPages.severity.Error, 'Please select '+ aToSelect + ' answer(s)')); 
+                return null;
+            }
+           
+       }
+
+    //Disabling previous button if on first question
+    public Boolean getDisablePrevious() { 
+        if (counter>0) 
+            return false; 
+        else 
+            return true;
+   }
+   
+   //Disabling next button if on last question
+    public Boolean getDisableNext() {
+        if (counter + list_size < total_size) 
+              return false; 
+          else 
+              return true;
+   }
+   
+   //Returning count of questions and answers to be displayed
+    public Integer getTotal_size() {
+        return total_size;
+    }
+    
+    //Returning current question and answers been attempted
+    public Integer getQuestionNumber() {
+        return counter/list_size + 1;
+    }
+    
+    //Returning count of question and answers to be attempted
+    public Integer getQuestionCount() {
+        if (math.mod(total_size, list_size) > 0) {
+            return total_size/list_size + 1;
+        } 
+        else {
+         return (total_size/list_size);
+        }
+    }
+    
+    //Invoked on clicking start button on ExamStart page to start the exam
+    public PageReference Start(){
+        updateExamStatus();
+        return Page.ExamContainer;
+    }  
+    
+    Integer count;
+    public Integer getExamPoints(){
+        count = [Select count() from Question__c where Examination__c = :eId and Number_Correctly_Selected__c = 1.0];
+        return count;
+    }
+    
+    public String getExamResult(){
+        
+        String result;
+        Set<Id> tfId = new Set<Id>();
+        List<Examination__c> qxList = [Select Test_form__c from Examination__c where Id =:eId];
+        
+        for(Examination__c qx : qxList){
+            tfId.add(qx.Test_form__c);
+        }
+        
+        Decimal passingScore = [SELECT Passing_Score__c FROM Test_Form__c where Id =:tfId].Passing_Score__c;
+        
+        Decimal D = count;
+        Decimal score = D.Divide(total_size, 1)*100;
+
+        if(score >passingScore){
+            System.debug('I am passed');
+            result = 'PASSED';
+        }
+        else{
+            System.debug('I am failed' + (count/total_size)*100 );
+            result = 'FAILED';
+        }
+        
+        return result;
+    }
+    
+    //Updating the status of exam from New to Inprogress or completed when start button on ExamStart page is clicked
+    public void updateExamStatus(){
+        List<Examination__c> examStatus = new List<Examination__c>();
+        examStatus = [Select Examination_Status__c from Examination__c where name=: examName];
+        
+        List<Examination__c> upadteEstatus = new List<Examination__c>();
+        
+        for(Examination__c eStatus : examStatus){
+            if(eStatus.Examination_Status__c == 'New'){
+                eStatus.Examination_Status__c = 'In Progress';
+                upadteEstatus.add(eStatus);
+            }
+            else if(eStatus.Examination_Status__c == 'In Progress'){
+                eStatus.Examination_Status__c = 'Completed';
+                upadteEstatus.add(eStatus);
+            }
+        }
+        
+        if(!upadteEstatus.isEmpty()){
+            update upadteEstatus;
+        }
+    }
+}

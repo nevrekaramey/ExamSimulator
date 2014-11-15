@@ -1,0 +1,20 @@
+<apex:page controller="MasterExaminationController" tabStyle="Examination__c" >
+<apex:sectionHeader title="Examination" subtitle="{! $User.FirstName} - {!ExamName}"/>
+<apex:form id="theForm">
+    <apex:pageBlock mode="edit">
+    
+        <apex:pageBlockSection title="Review your answers">          
+            <apex:dataList var="q" value="{!QuestionList}">
+                <apex:commandlink action="{!ReviewQuestion}">
+                    <apex:outputText value="{!markSymbolReview} {!q.Name}" escape="false"/> 
+                </apex:commandLink>
+            </apex:dataList> <br/>
+            
+            <apex:panelGrid columns="2">
+              <apex:commandButton action="{!finish}" disabled="false" value="Finish Examination"/>
+            </apex:panelGrid>
+            
+        </apex:pageBlockSection>  
+</apex:pageBlock>
+</apex:form>
+</apex:page>

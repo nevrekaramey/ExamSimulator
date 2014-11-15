@@ -1,0 +1,159 @@
+@isTest
+public class testMasterExaminationController{
+    
+    public static testMethod void testMasterControl(){
+        Account ac = new Account();
+        ac.Name = 'Test Account';
+        insert ac;
+             
+        Test_Form__c tf = new Test_Form__c();
+        tf.Name = 'Dev 501';
+        tf.Account__c = ac.id;
+        tf.Test_Status__c = 'Open';
+        insert tf;
+        
+        Question__c q = new Question__c();
+        q.Name ='Test Question 1';
+        q.Test_Form__c = tf.id;
+        
+        
+        insert q;
+        
+        Answer__c a = new Answer__c();
+        a.Name = 'Test Answer 1';
+        a.Question__c = q.Id;
+        a.Answer__c = 'Test Question Description';
+        a.Correct__c = true;
+        
+        insert a;
+       
+        Map<String,ID> profiles = new Map<String,ID>();
+        List<Profile> ps = [select id, name from Profile where name = 
+         'Custom: Exam Taker'];
+
+      for(Profile p : ps){
+         profiles.put(p.name, p.id);
+      }
+   
+      User eUser = new User(alias = 'standt', 
+      email='standarduser@testorg.com', 
+      emailencodingkey='UTF-8', 
+      lastname='Testing', languagelocalekey='en_US', 
+      localesidkey='en_US', 
+      profileid = profiles.get('Custom: Exam Taker'), 
+      timezonesidkey='America/Los_Angeles',
+      Account_ID__c = ac.id, 
+      username='amey@test.com');
+
+      insert eUser;
+        
+        Examination__c ex1 = new Examination__c();
+        ex1.Name = 'DEV 501';
+        ex1.Examination_Status__c = 'In Progress';
+        ex1.Test_Form__c = tf.Id;
+        ex1.Examination_Taker__c = eUser.Id;
+        insert ex1;    
+        
+        Question__c q1 = new Question__c();
+        q1.Name ='Test Question 1';
+        q1.Examination__c = ex1.Id;
+        
+        insert q1;
+        
+        Answer__c a1 = new Answer__c();
+        a1.Name = 'Test Answer 1';
+        a1.Question__c = q1.Id;
+        a1.Answer__c = 'Test Question Description';
+        a1.Correct__c = true;
+        
+        insert a1;
+        
+        List<Examination__c> eList = [Select Name, Examination_Status__c, Test_Form__c, Examination_Taker__c from Examination__c where Id =:ex1.Id];
+        
+        List<Question__c> qList = [Select Id, Name, Question__c, Mark_For_Review__c,Question_Number__c, Examination__c from Question__c where Examination__c =:ex1.Id limit :1];
+        List<Question__c> q1List = [Select Id, Name, Question__c, Mark_For_Review__c,Question_Number__c, Examination__c from Question__c where Examination__c =:ex1.Id];
+        List<Question__c> fqList = [select Id,Question__c, Name, Mark_For_review__c from Question__C where Examination__c=:ex1.Id limit :1];
+        
+        List<Answer__c> aList = [Select Id, Answer__c from Answer__c where Question__c =:q1.Id];
+        
+        Question__c qx;
+        
+        for(Question__c qx1 : fqList){
+            qx = qx1;
+        }
+        
+        MasterExaminationController mc = new MasterExaminationController();
+        mc.ExamName = ex1.Name;
+        mc.eId = ex1.Id;
+        
+        PageReference pr = Page.ExaminationStart;
+        pr.getParameters().put('examName',ex1.Name);
+        pr.getParameters().put('examId',ex1.Id);
+        
+        mc.updateExamStatus();
+        System.assertEquals(ex1.Name, mc.getExamName()); 
+        System.assertEquals(qx, mc.getQx());         
+        System.assertEquals(qList, mc.getQuestions());      
+        System.assertEquals(q1List, mc.getQuestionList());     
+        
+        
+        List<SelectOption> tOptions = new List<SelectOption>();
+        String[] answers = new String[]{};
+        Set<Id> aId = new Set<Id>();
+        Set<ID> testqId = new Set<ID>();
+            
+            //List of Question Id specific to exam
+            List<Question__c> testqList = [Select Id from Question__c where Examination__c =:ex1.Id limit :1];
+            System.debug('List value:' + testqList);
+            
+            //Adding Question Id to the set
+            for(Question__c tq : testqList){
+                testqId.add(tq.Id);
+            }
+         //Retreving all the answer specific to the question
+          String[] sAns = new String[]{};
+            Answer__c[] answers1 = [Select Name,Id, Answer__c,selected__c, Number__c from Answer__c where Question__c IN:testqId];
+         System.debug(' AList value:' + answers1);
+         for(Answer__c ans : answers1){
+         System.debug(' AList name:' + ans.Name);
+            toptions.add(new SelectOption(ans.Answer__c, ans.Answer__c));
+            sAns.add(ans.Answer__c);
+            
+            if(ans.Selected__c == true){
+                answers.add(ans.Answer__c);
+            }
+            aId.add(ans.Id);            
+        } 
+        System.assertEquals(toptions, mc.getAnswerList());
+        
+        mc.Answers = sAns;
+        System.assertEquals(mc.Answers, mc.getAnswers());
+        
+        Decimal aToSelect;
+        aToSelect= [select Number_of_Correct_Answers__c from Question__c where Id =:q1.Id].Number_of_Correct_Answers__c;
+        
+        System.assertEquals(aToSelect, mc.getAnswerToSelect());
+        
+        Integer total_size;
+        total_size = [select count() from Question__c where Examination__c =:ex1.Id ];
+        
+        //need to do final testing
+        System.assertEquals(1, mc.getTotal_size());
+        
+        mc.getQuestionCount();
+        mc.getExamPoints();
+        mc.setAnswers(sAns);
+        mc.getDisablePrevious();
+        mc.getDisableNext();
+        mc.getQuestionNumber();
+        mc.Review();
+        mc.Finish();
+        mc.Next();
+        mc.start();
+        mc.previous();
+        mc.getExamResult();
+        mc.ReviewQuestion();
+       // mc.getExamResult();
+        
+    }
+}

@@ -1,0 +1,39 @@
+<apex:page controller="MasterExaminationController" tabStyle="Examination__c" >
+
+<apex:sectionHeader title="Examination" subtitle="{! $User.FirstName} - {!ExamName}"/>
+<apex:pageMessages />
+<apex:form id="theForm">
+    <apex:pageBlock mode="edit">
+        
+        <apex:pageBlockSection title="Questions {!QuestionNumber} to {!QuestionCount}" id="QABlock">
+           
+            <apex:dataList var="q" value="{!Questions}">
+                <apex:outputText value="{!q.Question__c}" escape="false"/> 
+            </apex:dataList> <br/><br/>
+            
+            <apex:outputText >(Select {!AnswerToSelect} answers)</apex:outputText><br/>
+            
+            <apex:selectCheckboxes value="{!answers}" layout="pageDirection">
+                  <apex:selectOptions value="{!answerList}"/><br/>
+            </apex:selectCheckboxes>
+            
+        </apex:pageBlockSection>
+        
+        <apex:pageBlockSection >
+            <apex:panelGrid >
+                <apex:inputCheckbox value="{!reviewCheck}">Mark for review</apex:inputCheckBox>
+            </apex:panelGrid>
+            
+            <apex:panelGrid columns="4">
+              <apex:commandButton action="{!previous}" disabled="{!disablePrevious}" value="Previous"/>
+              <apex:commandButton action="{!next}" disabled="{!disableNext}" value="Next"/>
+              <apex:commandButton action="{!review}" disabled="false" value="Review"/>
+              <apex:commandButton action="{!finish}" value="Submit"/>
+            </apex:panelGrid>
+    </apex:pageBlockSection>
+</apex:pageBlock>
+</apex:form>
+
+
+</apex:page>
+                           
